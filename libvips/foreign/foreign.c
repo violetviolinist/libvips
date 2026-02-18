@@ -680,7 +680,16 @@ vips_foreign_find_load_buffer_sub(VipsForeignLoadClass *load_class,
 		return NULL;
 
 	if (load_class->is_a_buffer) {
-		if (load_class->is_a_buffer(*buf, *len))
+		/* PDF's is_a_buffer scans for "%PDF" up to an offset. Cap the
+		 * length to 32 bytes (matching MAX_OFFSET in pdf.c) so we don't
+		 * scan the entire buffer for large PDF buffers, consistent with
+		 * the file and source loaders.
+		 */
+
+		size_t check_len = strcmp(object_class->nickname, "pdfload_buffer") == 0
+			? VIPS_MIN(*len, 32)
+			: *len;
+		if (load_class->is_a_buffer(*buf, check_len))
 			return load_class;
 	}
 	else
